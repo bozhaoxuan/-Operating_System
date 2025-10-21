@@ -103,40 +103,65 @@ best_fit_init_memmap(struct Page *base, size_t n) {
     }
 }
 
+/* 最佳适应算法分配物理页 */
 static struct Page *
 best_fit_alloc_pages(size_t n) {
+    // 验证请求页数必须大于0
     assert(n > 0);
+    
+    // 检查系统是否有足够的空闲页满足请求
     if (n > nr_free) {
-        return NULL;
+        return NULL; // 空闲页不足，返回NULL
     }
-    struct Page *page = NULL;
-    list_entry_t *le = &free_list;
-    size_t min_size = nr_free + 1;
-    /*LAB2 EXERCISE 2: 2312848*/ 
-    // 下面的代码是first-fit的部分代码，请修改下面的代码改为best-fit
-    // 遍历空闲链表，查找满足需求的空闲页框
-    // 如果找到满足需求的页面，记录该页面以及当前找到的最小连续空闲页框数量
-
+    
+    struct Page *page = NULL;      // 用于记录找到的最佳空闲块
+    list_entry_t *le = &free_list; // 空闲链表遍历指针
+    size_t min_size = nr_free + 1; // 初始化最小大小为不可能的值（大于最大空闲块）
+    
+    /* LAB2 EXERCISE 2: 2312848 */
+    // 下面的代码修改为最佳适应算法
+    // 遍历空闲链表，查找满足需求的最小空闲页框
     while ((le = list_next(le)) != &free_list) {
-        struct Page *p = le2page(le, page_link);
+        struct Page *p = le2page(le, page_link); // 获取当前页面对应的Page结构
+        
+        // 检查当前块是否满足请求且比之前找到的块更小
         if (p->property >= n && p->property < min_size) {
-            page = p;
-            min_size = p->property;
+            page = p;                // 更新最佳块指针
+            min_size = p->property;   // 更新最小满足大小
         }
     }
 
+    // 如果找到合适的空闲块
     if (page != NULL) {
+        // 获取当前块在链表中的前一个节点
         list_entry_t* prev = list_prev(&(page->page_link));
+        
+        // 从空闲链表中移除当前块
         list_del(&(page->page_link));
+        
+        // 如果当前块大于请求大小，进行分割
         if (page->property > n) {
+            // 计算剩余块的起始位置（当前块地址 + 请求页数）
             struct Page *p = page + n;
+            
+            // 设置剩余块的大小（原大小 - 请求大小）
             p->property = page->property - n;
+            
+            // 标记剩余块为空闲块的起始页
             SetPageProperty(p);
+            
+            // 将剩余块插入到原位置（前一个节点之后）
             list_add(prev, &(p->page_link));
         }
+        
+        // 更新全局空闲页计数
         nr_free -= n;
+        
+        // 标记分配出的块为非空闲
         ClearPageProperty(page);
     }
+    
+    // 返回分配的页面（可能为NULL）
     return page;
 }
 
