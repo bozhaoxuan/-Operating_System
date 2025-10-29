@@ -8,6 +8,7 @@
 #include <riscv.h>
 #include <stdio.h>
 #include <trap.h>
+#include <sbi.h>
 
 #define TICK_NUM 100
 
@@ -22,7 +23,7 @@ static void print_ticks() {
 /* idt_init - initialize IDT to each of the entry points in kern/trap/vectors.S
  */
 void idt_init(void) {
-    /* LAB3 YOUR CODE : STEP 2 */
+    /* LAB3 YOUR CODE : 2312345薄照轩 2312848石爽 2313827马思远 STEP 2 */
     /* (1) Where are the entry addrs of each Interrupt Service Routine (ISR)?
      *     All ISR's entry addrs are stored in __vectors. where is uintptr_t
      * __vectors[] ?
@@ -124,12 +125,26 @@ void interrupt_handler(struct trapframe *tf) {
             // In fact, Call sbi_set_timer will clear STIP, or you can clear it
             // directly.
             // cprintf("Supervisor timer interrupt\n");
-             /* LAB3 EXERCISE1   YOUR CODE :  */
+             /* LAB3 EXERCISE1   YOUR CODE :2312345薄照轩 2312848石爽 2313827马思远  */
             /*(1)设置下次时钟中断- clock_set_next_event()
              *(2)计数器（ticks）加一
              *(3)当计数器加到100的时候，我们会输出一个`100ticks`表示我们触发了100次时钟中断，同时打印次数（num）加一
             * (4)判断打印次数，当打印次数为10时，调用<sbi.h>中的关机函数关机
             */
+            clock_set_next_event();
+            // 计数器加一
+            ticks++;
+            // 静态变量用于记录打印次数
+            static int print_count = 0;
+           // 每100次中断打印一次
+            if (ticks % TICK_NUM == 0) {
+                print_ticks();
+                print_count++;
+            // 打印10次后关机
+                if (print_count >= 10) {
+                    sbi_shutdown();
+                }
+            }
             break;
         case IRQ_H_TIMER:
             cprintf("Hypervisor software interrupt\n");
